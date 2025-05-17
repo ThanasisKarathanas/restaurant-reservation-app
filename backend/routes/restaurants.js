@@ -1,19 +1,27 @@
 const express = require('express');
 const pool = require('../db');
+
 const router = express.Router();
 
+// GET all restaurants or search by name/location
 router.get('/', async (req, res) => {
-  const search = req.query.search || '';
+  const { search } = req.query;
   try {
     const conn = await pool.getConnection();
-    const result = await conn.query(
-      'SELECT * FROM restaurants WHERE name LIKE ? OR location LIKE ?',
-      [`%${search}%`, `%${search}%`]
-    );
+    let query = 'SELECT * FROM restaurants';
+    let params = [];
+
+    if (search) {
+      query += ' WHERE name LIKE ? OR location LIKE ?';
+      const searchTerm = `%${search}%`;
+      params = [searchTerm, searchTerm];
+    }
+
+    const rows = await conn.query(query, params);
     conn.release();
-    res.json(result);
+    res.json(rows);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch restaurants', error: err });
+    res.status(500).json({ error: err.message });
   }
 });
 
